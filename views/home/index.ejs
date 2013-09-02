@@ -1,0 +1,149 @@
+
+<link rel="stylesheet" type="text/css" href="styles/index.css">
+
+<div class="top">
+
+	<h2>Random Comments</h2>
+</div>
+
+<div class="content">
+
+
+	<div id="comments">
+
+
+	</div>
+
+</div>
+
+<div class="bottom">
+
+<div class="entry">
+<form id="form">
+<input id="newcomment" type="text" name="body" placeholder="comment...">
+<input id="newcommentname" type="text" name="name" placeholder="name">
+<span id="erroroutput"></span>
+<input type="submit" id="gobutton"/>
+</form>
+</div>
+
+</div>
+
+
+<script>
+$(function(){
+
+	var lastperson = "geoff";
+	var divright = false;
+
+
+	function loadComments()
+	{
+		$.get('/comments',function(response) {
+
+			console.log("ajax response: \n" + response);
+
+			jQuery(document).ready(function() 
+			{
+
+				jQuery.each(response, function(key, comment) {
+
+					var date = new Date(comment.updatedAt);
+
+					$('#comments').append('<div id="' + comment.id + '" class="comment"><span class="body">' + comment.body + '</span><br><br><span class="footer">' + comment.name + ' on ' +  date.toDateString() + '</span></div>');
+
+					if(comment.name !== lastperson)
+					{
+
+						divright = !divright;
+					}
+
+					if(divright)
+					{
+						$("#" + comment.id + " > .body").addClass("commentright");
+						$("#" + comment.id + " > .footer").addClass("footerright");
+					}
+
+					lastperson = comment.name;
+				});
+			});
+		});
+	}
+
+	loadComments();
+
+	$(".entry").submit(function(){
+
+		$("#erroroutput").empty();
+
+		//post content
+		 $.post( '/comments', $('#form').serialize(), function(data) {
+
+	       },
+	       'json' // I expect a JSON response
+	    ).fail(function()
+	    {
+	    	$("#erroroutput").text("Error posting comment");
+	    })
+
+
+		//reload comments
+		//loadComments();
+
+		//disable form action
+		return false;
+	})
+
+
+	$("#newcomment").click(function(){
+		$("#newcomment").text("");
+	});
+
+
+	$("h2").click(function(){
+
+		//scroll to top
+		$(document).scrollTop(0);
+	});
+
+
+	var socket = io.connect('http://192.168.2.10:1337');
+
+	socket.request('/comments',{}, function (response) {
+	  // response contains a list of all users
+	  console.log(response);
+	});
+
+
+    socket.on('message', function messageReceived(message) {
+      console.log('New comment', message);
+
+
+      	var comment = message.data;
+      	var date = new Date(comment.updatedAt);
+
+		$('#comments').append('<div id="' + comment.id + '" class="comment"><span class="body">' + comment.body + '</span><br><br><span class="footer">' + comment.name + ' on ' +  date.toDateString() + '</span></div>');
+
+		if(comment.name !== lastperson)
+		{
+
+			divright = !divright;
+		}
+
+		if(divright)
+		{
+			$("#" + comment.id + " > .body").addClass("commentright");
+			$("#" + comment.id + " > .footer").addClass("footerright");
+		}
+
+		lastperson = comment.name;		
+
+		//scroll to bottom
+		$(document).scrollTop($(".content").get(0).scrollHeight);
+
+    });
+
+
+
+});
+</script>
